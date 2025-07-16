@@ -664,62 +664,86 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
 
 <script>
-    const enviarEmail = async (api_key) => {
+    const enviarEmail = async () => { // Não precisamos mais da 'api_key' como parâmetro aqui
+        // Desabilita os campos do formulário para evitar múltiplos envios e dar feedback visual
         $(".form-control").prop("disabled", true);
-        const form = document.getElementById('form-orcamento');
+
+        // Pega as referências e valores dos elementos do formulário
+        const form = document.getElementById('form-orcamento'); // Certifique-se que o ID está correto
         const nome = document.getElementById('nome').value;
         const email = document.getElementById('email').value;
         const telefone = document.getElementById('telefone').value;
-        const como = document.getElementById('como').value;
+        // O campo 'como' não foi incluído no back-end Node.js que criamos,
+        // então é seguro remover essa linha se não for usar.
+        // const como = document.getElementById('como').value;
         const assunto = document.getElementById('assunto').value;
         const mensagem = document.getElementById('mensagem').value;
         const button = document.getElementById('submit-contato');
-        // const emailContato = 'teste-formulario@clientes.qualitysmi.com.br';
-        const emailContato = 'jr@galvanofer.com.br';
+        
+        // Pega o valor do campo 'produto' se ele existir.
+        // Isso é uma segurança caso o campo não esteja presente em todas as páginas com o formulário.
+        const produto = document.getElementById('produto') ? document.getElementById('produto').value : '';
+
+        // Desabilita o botão e muda o texto
         button.disabled = true;
-        button.innerText = 'Enviando...'
-        const request = await fetch(`https://api.qualitysmi.com.br/auth.php?api_key=${api_key}`);
-        const response = await request.json();
-        if (response.token != null) {
-            const formData = new FormData();
-            formData.append('nome', nome)
-            formData.append('email', email)
-            formData.append('telefone', telefone)
-            formData.append('como', como)
-            formData.append('assunto', assunto)
-            formData.append('mensagem', mensagem)
-            formData.append('emailContato', emailContato)
-            const enviaEmail = await fetch('https://api.qualitysmi.com.br/dispara-email.php', {
+        button.innerText = 'Enviando...';
+
+        // Prepara os dados do formulário para enviar como JSON
+        const formData = {
+            nome,
+            email,
+            telefone,
+            produto, // Inclui o produto
+            assunto,
+            mensagem
+            // Remova 'como' daqui se não estiver sendo usado ou tratado no back-end
+        };
+
+        try {
+            // Faz a requisição POST para a sua Serverless Function na Vercel
+            // A URL relativa '/api/send-email' é o que a Vercel espera.
+            const response = await fetch('/api/send-email', {
                 method: 'POST',
-                headers: new Headers({
-                    api_key,
-                    token: response.token
-                }),
-                body: formData,
+                headers: {
+                    'Content-Type': 'application/json' // Informa ao servidor que o corpo é JSON
+                },
+                body: JSON.stringify(formData) // Converte o objeto JavaScript para uma string JSON
             });
-            const res = await enviaEmail.json();
+
+            // Converte a resposta do servidor de JSON para objeto JavaScript
+            const res = await response.json();
+
+            // Verifica se houve erro no envio de e-mail pela Serverless Function
             if (!res.error) {
+                // Se não houve erro, reabilita os campos e redireciona para a página de sucesso
                 $(".form-control").prop("disabled", false);
                 window.location = 'envia-contato.html';
             } else {
+                // Se houve erro (retornado pela Serverless Function), exibe no modal
                 $("#modal-mensagem-fancybox").html(res.error);
                 $("#trigger-mensagem-fancybox").fancybox().trigger("click");
                 $(".form-control").prop("disabled", false);
                 button.disabled = false;
-                button.innerText = 'Enviar'
+                button.innerText = 'Enviar';
             }
-        } else {
-            $("#modal-mensagem-fancybox").html(response.erro);
+        } catch (error) {
+            // Captura erros na própria requisição (ex: falha de rede, servidor fora do ar)
+            console.error('Erro na requisição para o back-end:', error);
+            $("#modal-mensagem-fancybox").html('Erro de conexão com o servidor. Tente novamente.');
             $("#trigger-mensagem-fancybox").fancybox().trigger("click");
             $(".form-control").prop("disabled", false);
+            button.disabled = false;
+            button.innerText = 'Enviar';
         }
-    }
-    const form = document.getElementById('form-orcamento');
+    };
+
+    // Adiciona o event listener ao formulário
+    const form = document.getElementById('form-orcamento'); // Certifique-se que o ID está correto
     form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        enviarEmail('57eae222-65fd-4a61-9279-898cd42b3412');
+        e.preventDefault(); // Impede o envio padrão do formulário
+        enviarEmail(); // Chama a função para enviar o e-mail, sem passar 'api_key'
     });
-</script>                                                    <main class="main-content">
+</script>                      <main class="main-content">
                                                         <section class="container">
                                                             <div id="breadcrumb">
 <a rel="home" href="index.html" title="<i class='fa-solid fa-house fa-bounce'></i>"><span><i class='fa-solid fa-house fa-bounce'></i></span></a> » <div>
